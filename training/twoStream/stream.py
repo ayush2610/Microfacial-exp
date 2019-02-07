@@ -4,60 +4,56 @@ from keras.models import Model
 from keras.layers import Dense, Input, Activation, Flatten
 from keras.layers.convolutional import Conv3D, MaxPooling3D
 
-
-class twoStream:
+class NewNet:
     def build(numSamples,height,width,channels,classes,weightPath, activation='relu'):
-        #stream 1
+        #input 1
         In1 = Input(shape=(numSamples,height,width,channels))
-        x1  = Conv3D(128,(3,3,3),strides=(1,1,1),padding ='same', activation='relu')(In1)
-        x1  = MaxPooling3D(pool_size=(1,2,2),strides=(1,2,2),padding = 'valid')(x1)
+        x1  = Conv3D(8,(3,3,3),strides=(2,2,2),padding ='valid', activation='relu')(In1)
 
-        x1  = Conv3D(256,(3,3,3),strides=(1,1,1),padding ='same', activation='relu')(x1)
-        x1  = MaxPooling3D(pool_size=(2,2,2),strides=(2,2,2),padding = 'valid')(x1)
-                
-        #x1  = Conv3D(256,(3,3,3),strides=(1,1,1),padding ='same', activation='relu')(x1)
-        #x1  = Conv3D(256,(3,3,3),strides=(1,1,1),padding ='same', activation='relu')(x1)
-        #x1  = MaxPooling3D(pool_size=(2,2,2),strides=(2,2,2),padding = 'valid')(x1)
-
-        #stream 2
+        #input 2
         In2 = Input(shape=(numSamples,height,width,channels))
-        x2  = Conv3D(128,(3,3,3),strides=(1,1,1),padding= 'same', activation='relu')(In2)
-        x2  = MaxPooling3D(pool_size=(1,2,2),strides=(1,2,2),padding = 'valid')(x2)
+        x2  = Conv3D(8,(3,3,3),strides=(2,2,2),padding ='valid', activation='relu')(In2)
 
-        x2  = Conv3D(256,(3,3,3),strides=(1,1,1),padding ='same', activation='relu')(x2)
-        x2  = MaxPooling3D(pool_size=(2,2,2),strides=(2,2,2),padding = 'valid')(x2)
-                
-        #x2  = Conv3D(256,(3,3,3),strides=(1,1,1),padding ='same', activation='relu')(x2)
-        #x2  = Conv3D(256,(3,3,3),strides=(1,1,1),padding ='same', activation='relu')(x2)
-        #x2  = MaxPooling3D(pool_size=(2,2,2),strides=(2,2,2),padding = 'valid')(x2)
-
-        #concatenated
+        #concat
         x  = keras.layers.concatenate([x1,x2])
-        x  = Conv3D(512,(3,3,3),strides=(1,1,1),padding ='same', activation='relu')(x)
-        x  = Conv3D(512,(3,3,3),strides=(1,1,1),padding ='same', activation='relu')(x)
-        #x  = MaxPooling3D(pool_size=(2,2,2),strides=(2,2,2),padding = 'valid')(x)
 
-        x  = Conv3D(512,(3,3,3),strides=(1,1,1),padding ='same', activation='relu')(x)
-        #x  = Conv3D(512,(3,3,3),strides=(1,1,1),padding ='same', activation='relu')(x)
-        x  = MaxPooling3D(pool_size=(2,2,2),strides=(2,2,2),padding = 'valid')(x)
+        xn1 = Conv3D(16,(3,3,3),strides=(2,2,2),padding ='valid', activation='relu')(xn1)
+        xn2 = Conv3D(16,(5,5,5),strides=(2,2,2),padding ='valid', activation='relu')(xn2)
+        xn3 = Conv3D(16,(7,7,7),strides=(2,2,2),padding ='valid', activation='relu')(xn3)
+        xn4 = Conv3D(16,(11,11,11),strides=(2,2,2),padding ='valid', activation='relu')(xn4)
 
-        x  = Flatten()(x)
-        x  = Dense(100)(x)
-        x  = Activation('relu')(x)
+        #layers 2
 
-        x  = Dense(100)(x)
-        x  = Activation('relu')(x)
+        xn1 = Conv3D(32,(3,3,3),strides=(2,2,2),padding ='valid', activation='relu')(xn1)
+        xn2 = Conv3D(32,(3,3,3),strides=(2,2,2),padding ='valid', activation='relu')(xn2)
+        xn3 = Conv3D(32,(5,5,5),strides=(2,2,2),padding ='valid', activation='relu')(xn3)
+        xn4 = Conv3D(32,(7,7,7),strides=(2,2,2),padding ='valid', activation='relu')(xn4)
 
+        #layers 3
+
+
+        xn1 = Conv3D(64,(3,3,3),strides=(2,2,2),padding ='valid', activation='relu')(xn1)
+        xn2 = Conv3D(64,(3,3,3),strides=(2,2,2),padding ='valid', activation='relu')(xn2)
+        xn3 = Conv3D(64,(3,3,3),strides=(2,2,2),padding ='valid', activation='relu')(xn3)
+        xn4 = Conv3D(64,(5,5,5),strides=(2,2,2),padding ='valid', activation='relu')(xn4)
+
+        #layers 4
+
+        xn1 = Conv3D(96,(3,3,3),strides=(2,2,2),padding ='valid', activation='relu')(xn1)
+        xn2 = Conv3D(96,(3,3,3),strides=(2,2,2),padding ='valid', activation='relu')(xn2)
+        xn3 = Conv3D(96,(3,3,3),strides=(2,2,2),padding ='valid', activation='relu')(xn3)
+        xn4 = Conv3D(96,(3,3,3),strides=(2,2,2),padding ='valid', activation='relu')(xn4)
+
+        x  = keras.layers.concatenate([xn1,xn2,xn3,xn4])
+
+        x = Conv3D(128,(3,3,3),strides=(2,2,2),padding ='valid', activation='relu')(x)
         x  = Dense(classes)(x)
         x  = Activation('softmax')(x)
-
-        model = Model(inputs = [In1,In2], outputs = x)
+        
         if weightPath is not None:
             model.load_weights(weightPath)
         plot_model(model,to_file="model.png", show_shapes=True,show_layer_names=True)
         return model
-    
 
-    
 
         
