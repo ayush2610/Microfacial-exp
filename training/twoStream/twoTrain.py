@@ -1,8 +1,8 @@
-import stream
-from sklearn.cross_validation import train_test_split
+import newNetwork
+from sklearn.model_selection import train_test_split
 from sklearn import datasets
 import numpy as np 
-from keras.optimizers import SGD                                                                                                                                                                                                                                                                                                                                        
+from keras.optimizers import SGD #GD                                                                                                                                                                                                                                                                                                                                        
 from keras.utils import np_utils
 from keras import backend as k
 import cv2 
@@ -10,6 +10,15 @@ import argparse
 import matplotlib.pyplot as plt
 import os
 import re
+import matplotlib.pyplot as plt
+import tensorflow as tf
+from keras.backend.tensorflow_backend import set_session
+
+config=tf.ConfigProto()
+config.gpu_options.allow_growth = True
+config.log_device_placement=True
+sess = tf.Session(config=config)
+set_session(sess)
 
 ap = argparse.ArgumentParser()
 ap.add_argument('-s','--save-model',type=int,default=-1,help='(optional) whether to  save the model')
@@ -44,23 +53,24 @@ for folder in emo_folders:
         countmod=0
         for img in imgs:    
             if 'norm' in img:
-                temp[countmod].append(path1+'/'+folder+'/'+fold+'/'+img)
-                countmod=(countmod+1)%29
+                temp[countmod]=np.append(temp[countmod],(path1+'/'+folder+'/'+fold+'/'+img))
+                countmod=(countmod+1)%28
+        #print(len(temp[8]))
         dataset['data'].extend(temp)
         dataset['target'].extend( [nametolabel[folder]]*28)
         print(q)
         q+=1
 oneset = 152
-data = np.zeros((len(dataset['data']),oneset,32,32))
+data = np.zeros((len(dataset['data']),oneset,112,112,3),dtype=np.uint8)
 p=0
 print(len(dataset['data']))
 #print(len(dataset['target']))
 for ie,addlis in enumerate(dataset['data']):
     #print(addlis)
     for ig ,imPath in enumerate(addlis):
-        image = cv2.imread(imPath,0)
-        image=cv2.resize(image,(32,32))
-        print(ig)
+        image = cv2.imread(imPath)
+        image=cv2.resize(image,(112,112))
+        print(ig,imPath)
         p+=1
         data[ie,ig,...]=image
 #print(len(data))
@@ -78,46 +88,71 @@ for folder in emo_folders:
         countmod=0
 
         for img in imgs:    
-            temp[countmod].append(path2+'/'+folder+'/'+fold+'/'+img)
-            countmod=(countmod+1)%29
+            temp[countmod]=np.append(temp[countmod],(path2+'/'+folder+'/'+fold+'/'+img))
+            countmod=(countmod+1)%28
         dataset2['data'].extend(temp)
-        dataset2['target'].extend( [nametolabel[folder] ])
+        dataset2['target'].extend( [nametolabel[folder] ]*28)
         print(q)
         q+=1
 oneset = 152
-data2 = np.zeros((len(dataset2['data']),oneset,32,32))
+data2 = np.zeros((len(dataset2['data']),oneset,112,112,3),dtype=np.uint8)
 p=0
 print(len(dataset2['data']))
 #print(len(dataset['target']))
 for ie,addlis in enumerate(dataset2['data']):
     #print(addlis)
     for ig ,imPath in enumerate(addlis):
-        image = cv2.imread(imPath,0)
-        image=cv2.resize(image,(32,32))
-        print(ig)
+        image = cv2.imread(imPath)
+        image=cv2.resize(image,(112,112))
+        print(ig,imPath)
         p+=1
         data2[ie,ig,...]=image
 
 print(np.shape(data2[0,0]))
 print(data2.shape)
+del dataset['data']
+del dataset2['data']
 #print(len(dataset['target']))
 data_f = np.stack((data,data2),axis=-1)
+del data
+del data2
+print(1)
 traindata,testdata,trainlabels,testlabels=train_test_split(np.array(data_f),np.array(dataset['target']).astype(int),test_size=0.10)
-
+print(2)
+del data_f
 trainlabels=np_utils.to_categorical(trainlabels,6)
 testlabels=np_utils.to_categorical(testlabels,6)
-
+print(3)
 finalTrainData = np.split(traindata,2,axis=-1)
+print(4)
 finaltestdata = np.array(np.split(testdata,2,axis=-1))
-
+del traindata
+del testdata
 print('Compiling Model...')
-opt = SGD(lr=0.01)
-model=stream.twoStream.build(numSamples=152,channels=1,height=32,width=32,activation='relu',classes=6,weightPath=args['weights'] if args['load_model']>0 else None )
+opt = SGD(lr=0.0001)
+model=newNetwork.NewNet.build(numSamples=152,width=112,height=112,channels=3,activation='relu',classes=6,weightPath=args['weights'] if args['load_model']>0 else None )
 model.compile(loss='categorical_crossentropy',optimizer=opt,metrics=['accuracy'])
 print(args['load_model'])
 if args['load_model']<0:
 	print('training...')
-	model.fit(finalTrainData,trainlabels,batch_size=1,epochs=20,verbose=1)
+	history=model.fit(finalTrainData,trainlabels,batch_size=1,epochs=200,verbose=1)
+	# Plot training & validation accuracy values
+	plt.plot(history.history['acc'])
+	plt.plot(history.history['val_acc'])
+	plt.title('Model accuracy')
+	plt.ylabel('Accuracy')
+	plt.xlabel('Epoch')
+	plt.legend(['Train', 'Test'], loc='upper left')
+	plt.show()
+
+# Plot training & validation loss values
+	plt.plot(history.history['loss'])
+	plt.plot(history.history['val_loss'])
+	plt.title('Model loss')
+	plt.ylabel('Loss')
+	plt.xlabel('Epoch')
+	plt.legend(['Train', 'Test'], loc='upper left')
+	plt.show()
 if args['save_model']>0:
     print('saving model....')
     model.save_weights(args['weights'],overwrite=True)
@@ -137,7 +172,7 @@ for i in range(15):
     else:
 	    image = (finaltestdata[0][i][0]).astype('uint8')
     #image = cv2.merge([image] * 3)
-    image = cv2.resize(image, (32, 32), interpolation=cv2.INTER_LINEAR)
+    image = cv2.resize(image, (112, 112), interpolation=cv2.INTER_LINEAR)
     cv2.putText(image, str(prediction[0]), (5, 20),
 				cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 0), 2)
     print("[INFO] Predicted: {}, Actual: {}".format(prediction[0],
